@@ -1,0 +1,9 @@
+*.log
+*.iml
+.idea/
+/bin
+cover
+/.dapper
+/dist
+*.swp
+.DS_STORE
