@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"os"
 	"time"
 
 	"github.com/rancher/machine/libmachine/drivers"
@@ -27,6 +28,7 @@ type Driver struct {
 	*drivers.BaseDriver
 	Userdata string
 	Image    string
+	Fail     string
 }
 
 const (
@@ -48,6 +50,12 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Name:   "dop-image",
 			Usage:  "Pod image to run",
 			EnvVar: "DOP_IMAGE",
+			Value:  "",
+		},
+		mcnflag.StringFlag{
+			Name:   "dop-fail",
+			Usage:  "Fail if this is set, can set to a duration to indicate how long to wait until fail.",
+			EnvVar: "DOP_FAIL",
 			Value:  "",
 		},
 	}
@@ -87,6 +95,7 @@ func (d *Driver) DriverName() string {
 func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.Userdata = flags.String("dop-userdata")
 	d.Image = flags.String("dop-image")
+	d.Fail = flags.String("dop-fail")
 	d.SetSwarmConfigFromFlags(flags)
 
 	if d.Image == "" {
@@ -98,6 +107,13 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 
 // PreCreateCheck is called to enforce pre-creation steps
 func (d *Driver) PreCreateCheck() error {
+	if d.Fail != "" {
+		if failDuration, err := time.ParseDuration(d.Fail); err == nil {
+			time.Sleep(failDuration)
+		}
+		os.Exit(1)
+	}
+
 	if d.Userdata != "" {
 		// Check we can read user data
 		_, err := ioutil.ReadFile(d.Userdata)
