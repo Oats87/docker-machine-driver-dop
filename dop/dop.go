@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
-	"os"
 	"time"
 
 	"github.com/rancher/machine/libmachine/drivers"
@@ -111,7 +110,7 @@ func (d *Driver) PreCreateCheck() error {
 		if failDuration, err := time.ParseDuration(d.Fail); err == nil {
 			time.Sleep(failDuration)
 		}
-		os.Exit(1)
+		return fmt.Errorf("intentional failure triggered")
 	}
 
 	if d.Userdata != "" {
