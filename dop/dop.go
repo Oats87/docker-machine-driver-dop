@@ -1,9 +1,13 @@
 package dop
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net"
 	"time"
@@ -15,6 +19,7 @@ import (
 	"github.com/rancher/machine/libmachine/state"
 	"github.com/rancher/wrangler/pkg/apply"
 	"github.com/rancher/wrangler/pkg/objectset"
+	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -239,6 +244,30 @@ func (d *Driver) GetState() (state.State, error) {
 	}
 }
 
+const providerIdDropInCreationScript = `
+#/bin/sh
+for d in k3s rke2; do
+mkdir -p /etc/rancher/${d}/config.yaml.d
+cat << EOF > /etc/rancher/${d}/config.yaml.d/100-kubelet-provider-id.yaml
+kubelet-arg+: "provider-id=dop://$(cat /etc/machine-id)"
+EOF
+done
+`
+
+func gzipEncode(data []byte) (string, error) {
+	var b bytes.Buffer
+	gz := gzip.NewWriter(&b)
+	gz.Flush()
+	if _, err := gz.Write(data); err != nil {
+		return "", err
+	}
+	if err := gz.Close(); err != nil {
+		return "", err
+	}
+	encoded := base64.StdEncoding.EncodeToString(b.Bytes())
+	return encoded, nil
+}
+
 // Start starts an existing pod instance or create an instance with an existing disk.
 func (d *Driver) Start() error {
 	if err := d.Stop(); err != nil {
@@ -259,6 +288,39 @@ func (d *Driver) Start() error {
 		if err != nil {
 			return err
 		}
+
+		cloudConfig := make(map[interface{}]interface{})
+		if err = yaml.Unmarshal(userdata, &cloudConfig); err != nil {
+			return err
+		}
+
+		logrus.Infof("Old cloud-config: %v", cloudConfig)
+
+		// write_files should be []interface{} like write_files:[map[content:<snip> encoding:gzip+b64 path:/usr/local/custom_script/install.sh permissions:0644]]]"
+		writeFiles := append(cloudConfig["write_files"].([]interface{}), map[string]string{
+			"encoding":    "b64",
+			"content":     base64.StdEncoding.EncodeToString([]byte(providerIdDropInCreationScript)),
+			"permissions": "0644",
+			"path":        "/usr/local/custom_script/create-drop-ins.sh",
+		})
+		cloudConfig["write_files"] = writeFiles
+
+		// runcmd should be []interface{} like runcmd:[sh /usr/local/custom_script/install.sh]
+		runcmd := []interface{}{"sh /usr/local/custom_script/create-drop-ins.sh"}
+
+		for i := range cloudConfig["runcmd"].([]interface{}) {
+			runcmd = append(runcmd, cloudConfig["runcmd"].([]interface{})[i])
+		}
+
+		cloudConfig["runcmd"] = runcmd
+
+		logrus.Infof("New cloud-config: %v", cloudConfig)
+
+		userdataContent, err := yaml.Marshal(cloudConfig)
+		if err != nil {
+			return err
+		}
+		userdata = append([]byte("#cloud-config\n"), userdataContent...)
 	}
 
 	metadata, err := json.Marshal(map[string]interface{}{
