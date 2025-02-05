@@ -315,6 +315,12 @@ func (d *Driver) Start() error {
 		cloudConfig["runcmd"] = runcmd
 
 		logrus.Infof("New cloud-config: %v", cloudConfig)
+
+		userdataContent, err := yaml.Marshal(cloudConfig)
+		if err != nil {
+			return err
+		}
+		userdata = append([]byte("#cloud-config\n"), userdataContent...)
 	}
 
 	metadata, err := json.Marshal(map[string]interface{}{
