@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/rancher/machine/libmachine/state"
 	"github.com/rancher/wrangler/pkg/apply"
 	"github.com/rancher/wrangler/pkg/objectset"
+	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -259,6 +261,14 @@ func (d *Driver) Start() error {
 		if err != nil {
 			return err
 		}
+
+		cloudConfig := make(map[interface{}]interface{})
+		if err = yaml.Unmarshal(userdata, &cloudConfig); err != nil {
+			return err
+		}
+
+		logrus.Infof("User-Data: %v", cloudConfig)
+
 	}
 
 	metadata, err := json.Marshal(map[string]interface{}{
