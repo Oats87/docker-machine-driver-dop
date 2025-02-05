@@ -297,12 +297,12 @@ func (d *Driver) Start() error {
 		logrus.Infof("Old cloud-config: %v", cloudConfig)
 
 		// write_files should be []interface{} like write_files:[map[content:<snip> encoding:gzip+b64 path:/usr/local/custom_script/install.sh permissions:0644]]]"
-		writeFiles := []interface{}{cloudConfig["write_files"].([]interface{}), map[string]string{
+		writeFiles := append(cloudConfig["write_files"].([]interface{}), map[string]string{
 			"encoding":    "b64",
 			"content":     base64.StdEncoding.EncodeToString([]byte(providerIdDropInCreationScript)),
 			"permissions": "0644",
 			"path":        "/usr/local/custom_script/create-drop-ins.sh",
-		}}
+		})
 		cloudConfig["write_files"] = writeFiles
 
 		// runcmd should be []interface{} like runcmd:[sh /usr/local/custom_script/install.sh]
