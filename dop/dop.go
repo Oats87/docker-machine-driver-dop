@@ -59,6 +59,12 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Value:  "",
 		},
 		mcnflag.IntFlag{
+			Name:   "dop-ssh-user",
+			Usage:  "SSH user",
+			EnvVar: "DOP_SSH_USER",
+			Value:  defaultSSHPort,
+		},
+		mcnflag.IntFlag{
 			Name:   "dop-ssh-port",
 			Usage:  "SSH port",
 			EnvVar: "DOP_SSH_PORT",
@@ -102,7 +108,7 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.Userdata = flags.String("dop-userdata")
 	d.Image = flags.String("dop-image")
 	d.Fail = flags.String("dop-fail")
-	d.SSHPort = 22
+	//d.SSHPort = 22
 
 	d.SetSwarmConfigFromFlags(flags)
 
