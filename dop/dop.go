@@ -31,8 +31,9 @@ type Driver struct {
 }
 
 const (
-	defaultUser  = "opensuse"
-	defaultImage = "oats87/systemd-node:v0.0.5-rc1"
+	defaultUser    = "opensuse"
+	defaultImage   = "rancher/systemd-node:v0.0.8"
+	defaultSSHPort = 22
 )
 
 // GetCreateFlags registers the flags this driver adds to
@@ -57,6 +58,12 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			EnvVar: "DOP_FAIL",
 			Value:  "",
 		},
+		mcnflag.IntFlag{
+			Name:   "dop-ssh-port",
+			Usage:  "SSH port",
+			EnvVar: "DOP_SSH_PORT",
+			Value:  defaultSSHPort,
+		},
 	}
 }
 
@@ -65,7 +72,7 @@ func NewDriver(machineName string, storePath string) *Driver {
 	return &Driver{
 		BaseDriver: &drivers.BaseDriver{
 			SSHUser:     defaultUser,
-			SSHPort:     22,
+			SSHPort:     defaultSSHPort,
 			MachineName: machineName,
 			StorePath:   storePath,
 		},
@@ -95,6 +102,8 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.Userdata = flags.String("dop-userdata")
 	d.Image = flags.String("dop-image")
 	d.Fail = flags.String("dop-fail")
+	d.SSHPort = 22
+
 	d.SetSwarmConfigFromFlags(flags)
 
 	if d.Image == "" {
