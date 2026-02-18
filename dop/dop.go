@@ -150,7 +150,7 @@ func getWaitForIP(ctx context.Context, k8s kubernetes.Interface, namespace, name
 	var ip string
 	for event := range w.ResultChan() {
 		if pod, ok := event.Object.(*corev1.Pod); ok {
-			if pod.Status.PodIP != "" {
+			if pod.Name == name && pod.Status.PodIP != "" {
 				ip = pod.Status.PodIP
 				w.Stop()
 			}
