@@ -291,7 +291,8 @@ func (d *Driver) Start() error {
 		return err
 	}
 
-	w, err := k8s.CoreV1().Pods(namespace).Watch(ctx, metav1.ListOptions{
+	w, err := k8s.CoreV1().Pods(pod.Namespace).Watch(ctx, metav1.ListOptions{
+		FieldSelector:  "metadata.name=" + pod.Name,
 		TimeoutSeconds: &[]int64{600}[0],
 	})
 	if err != nil {
